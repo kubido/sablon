@@ -12,6 +12,9 @@
 *.o
 *.a
 mkmf.log
+.idea
+.ruby-version
+.ruby-gemset
 
 /test/sandbox/*
 !/test/sandbox/.gitkeep

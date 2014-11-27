@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 module Sablon
   class Processor
+    RELATIONSHIPS_NS_URI = 'http://schemas.openxmlformats.org/package/2006/relationships'
+    PICTURE_NS_URI = 'http://schemas.openxmlformats.org/drawingml/2006/picture'
+    MAIN_NS_URI = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+    IMAGE_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
+
     def self.process(xml_node, context, properties = {})
       processor = new(parser)
       stringified_context = Hash[context.map {|k, v| [k.to_s, v] }]
@@ -9,8 +14,28 @@ module Sablon
       xml_node
     end
 
+    def self.process_rels(xml_node, images)
+      next_id = next_rel_id(xml_node)
+      relationships = xml_node.at_xpath('r:Relationships', 'r' => RELATIONSHIPS_NS_URI)
+      images.each do |image|
+        relationships.add_child("<Relationship Id='rId#{next_id}' Type='#{IMAGE_TYPE}' Target='media/#{image.name}'/>")
+        image.rid = next_id
+        next_id += 1
+      end
+      xml_node
+    end
+
     def self.parser
       @parser ||= Sablon::Parser::MailMerge.new
+    end
+
+    def self.next_rel_id(xml_node)
+      max = 0
+      xml_node.xpath('r:Relationships/r:Relationship', 'r' => RELATIONSHIPS_NS_URI).each do |n|
+        id = n.attributes['Id'].to_s[3..-1].to_i
+        max = id if id > max
+      end
+      max + 1
     end
 
     def initialize(parser)
@@ -39,7 +64,7 @@ module Sablon
 
     class Block < Struct.new(:start_field, :end_field)
       def self.enclosed_by(start_field, end_field)
-        @blocks ||= [RowBlock, ParagraphBlock]
+        @blocks ||= [ImageBlock, RowBlock, ParagraphBlock]
         block_class = @blocks.detect { |klass| klass.encloses?(start_field, end_field) }
         block_class.new start_field, end_field
       end
@@ -100,6 +125,21 @@ module Sablon
       end
     end
 
+    class ImageBlock < ParagraphBlock
+      def self.encloses?(start_field, end_field)
+        start_field.expression =~ /^@/
+      end
+
+      def replace(content)
+        pic_prop = self.class.parent(start_field).at_xpath('.//pic:cNvPr', 'pic' => PICTURE_NS_URI)
+        pic_prop.attributes['name'].value = content.name
+        blip = self.class.parent(start_field).at_xpath('.//a:blip', 'a' => MAIN_NS_URI)
+        blip.attributes['embed'].value = "rId#{content.rid}"
+        start_field.replace('')
+        end_field.replace('')
+      end
+    end
+
     class OperationConstruction
       def initialize(fields)
         @fields = fields
@@ -130,6 +170,9 @@ module Sablon
         when /([^ ]+):if/
           block = consume_block("#{$1}:endIf")
           Statement::Condition.new(Expression.parse($1), block)
+        when /^@([^ ]+):start/
+          block = consume_block("@#{$1}:end")
+          Statement::Image.new(Expression.parse($1), block)
         end
       end
 
