@@ -32,7 +32,7 @@ class SablonTest < Sablon::TestCase
     properties = {
       start_page_number: 7
     }
-    template.render_to_file @output_path, context, properties
+    template.render_to_file @output_path, context, [], properties
 
     assert_docx_equal @base_path + "fixtures/sablon_sample.docx", @output_path
   end
