@@ -39,8 +39,19 @@ module Sablon
     end
 
     def self.remove_final_blank_page(xml_node)
-      br = xml_node.xpath("/w:document/w:body/w:sectPr/preceding-sibling::w:p[./w:r/w:br[@w:type='page']]").last
-      br.remove unless br.nil?
+      children = xml_node.xpath('/w:document/w:body/*')
+      found_last = false
+      children.reverse.each do |child|
+        if found_last
+          if child.name == 'p' && child.namespace.prefix == 'w'
+            page_break = child.xpath("w:r/w:br[@w:type='page']")
+            child.remove unless page_break.nil? || child.xpath('*').count != 1 || child.xpath('w:r/*').count != 1
+          end
+          break
+        elsif child.name == 'sectPr' && child.namespace.prefix == 'w'
+          found_last = true
+        end
+      end
       xml_node
     end
 
@@ -76,7 +87,7 @@ module Sablon
       end
 
       def process(context)
-        replaced_node = Nokogiri::XML::Node.new("tmp", start_node.document)
+        replaced_node = Nokogiri::XML::Node.new('tmp', start_node.document)
         replaced_node.children = Nokogiri::XML::NodeSet.new(start_node.document, body.map(&:dup))
         Processor.process replaced_node, context
         replaced_node.children
@@ -115,7 +126,7 @@ module Sablon
 
     class RowBlock < Block
       def self.parent(node)
-        node.ancestors ".//w:tr"
+        node.ancestors './/w:tr'
       end
 
       def self.encloses?(start_field, end_field)
@@ -127,7 +138,7 @@ module Sablon
 
     class ParagraphBlock < Block
       def self.parent(node)
-        node.ancestors ".//w:p"
+        node.ancestors './/w:p'
       end
     end
 
