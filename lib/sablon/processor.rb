@@ -38,6 +38,12 @@ module Sablon
       max + 1
     end
 
+    def self.remove_final_blank_page(xml_node)
+      br = xml_node.xpath("/w:document/w:body/w:sectPr/preceding-sibling::w:p[./w:r/w:br[@w:type='page']]").last
+      br.remove unless br.nil?
+      xml_node
+    end
+
     def initialize(parser)
       @parser = parser
     end

@@ -40,4 +40,10 @@ class LookupOrMethodCallTest < Sablon::TestCase
     expr = Sablon::Expression.parse("user.first_name")
     assert_equal "«user.first_name»", expr.inspect
   end
+
+  def test_compound_method_call
+    user = {'first_name' => 'Jack', 'related_user' => {'first_name' => 'Jane'}}
+    expr = Sablon::Expression.parse('user.related_user.first_name')
+    assert_equal 'Jane', expr.evaluate({'user' => user})
+  end
 end

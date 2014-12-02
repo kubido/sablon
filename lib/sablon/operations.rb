@@ -59,24 +59,29 @@ module Sablon
       end
     end
 
-    class LookupOrMethodCall < Struct.new(:receiver_expr, :method)
+    class LookupOrMethodCall < Struct.new(:receiver_expr, :method_chain)
       def evaluate(context)
         receiver = receiver_expr.evaluate(context)
-        case receiver
-        when Hash; receiver[method]
-        else; receiver.public_send method
+        method_chain.each do |method|
+          receiver = case receiver
+                       when Hash
+                         receiver[method]
+                       else
+                         receiver.public_send method
+                     end
         end
+        receiver
       end
 
       def inspect
-        "«#{receiver_expr.name}.#{method}»"
+        "«#{receiver_expr.name}.#{method_chain.join('.')}»"
       end
     end
 
     def self.parse(expression)
       if expression.include?(".")
         parts = expression.split(".")
-        LookupOrMethodCall.new(Variable.new(parts.first), parts.last)
+        LookupOrMethodCall.new(Variable.new(parts.first), parts[1..-1])
       else
         Variable.new(expression)
       end

@@ -31,7 +31,9 @@ module Sablon
           out.put_next_entry(entry_name)
           content = entry.get_input_stream.read
           if entry_name == 'word/document.xml'
-            out.write(Processor.process(Nokogiri::XML(content), context, properties).to_xml)
+            xml_node = Processor.process(Nokogiri::XML(content), context, properties)
+            Processor.remove_final_blank_page xml_node
+            out.write(xml_node.to_xml)
           elsif entry_name =~ /word\/header\d*\.xml/ || entry_name =~ /word\/footer\d*\.xml/
             out.write(Processor.process(Nokogiri::XML(content), context).to_xml)
           elsif entry_name == 'word/_rels/document.xml.rels' && !images.empty?

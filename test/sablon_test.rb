@@ -7,10 +7,10 @@ class SablonTest < Sablon::TestCase
   def setup
     super
     @base_path = Pathname.new(File.expand_path("../", __FILE__))
-    @output_path = @base_path + "sandbox/sablon.docx"
   end
 
   def test_generate_document_from_template
+    output_path = @base_path + "sandbox/sablon.docx"
     template = Sablon.template(@base_path + "fixtures/sablon_template.docx")
     person = OpenStruct.new "first_name" => "Ronald", "last_name" => "Anderson"
     item = Struct.new(:index, :label, :rating)
@@ -32,8 +32,20 @@ class SablonTest < Sablon::TestCase
     properties = {
       start_page_number: 7
     }
-    template.render_to_file @output_path, context, [], properties
+    template.render_to_file output_path, context, [], properties
 
-    assert_docx_equal @base_path + "fixtures/sablon_sample.docx", @output_path
+    assert_docx_equal @base_path + "fixtures/sablon_sample.docx", output_path
+  end
+
+  def test_generate_multipage_doc
+    output_path = "#{@base_path}/sandbox/multipage.docx"
+    template = Sablon.template("#{@base_path}/fixtures/multipage_template.docx")
+    data1 = { 'foo' => 'data', 'bar' => 123 }
+    data2 = { 'foo' => 'abcd', 'bar' => 321 }
+    context = {
+      'elements' => [data1, data2]
+    }
+    template.render_to_file output_path, context, []
+    assert_docx_equal "#{@base_path}/fixtures/multipage_sample.docx", output_path
   end
 end
