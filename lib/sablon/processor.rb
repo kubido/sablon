@@ -46,8 +46,8 @@ module Sablon
           if child.name == 'p' && child.namespace.prefix == 'w'
             page_break = child.xpath("w:r/w:br[@w:type='page']")
             page_break.remove unless page_break.nil?
+            break
           end
-          break
         elsif child.name == 'sectPr' && child.namespace.prefix == 'w'
           found_last = true
         end
