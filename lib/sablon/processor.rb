@@ -5,6 +5,8 @@ module Sablon
     PICTURE_NS_URI = 'http://schemas.openxmlformats.org/drawingml/2006/picture'
     MAIN_NS_URI = 'http://schemas.openxmlformats.org/drawingml/2006/main'
     IMAGE_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
+    
+    attr_accessor :images_rids
 
     def self.process(xml_node, context, properties = {})
       processor = new(parser)
@@ -14,12 +16,18 @@ module Sablon
       xml_node
     end
 
+    def self.list_ids
+      @images_rids
+    end
+
     def self.process_rels(xml_node, images)
       next_id = next_rel_id(xml_node)
+      @images_rids = {}
       relationships = xml_node.at_xpath('r:Relationships', 'r' => RELATIONSHIPS_NS_URI)
       images.each do |image|
         relationships.add_child("<Relationship Id='rId#{next_id}' Type='#{IMAGE_TYPE}' Target='media/#{image.name}'/>")
         image.rid = next_id
+        @images_rids[image.name.match(/(.*)\.[^.]+$/)[1]] = next_id
         next_id += 1
       end
       xml_node
@@ -151,7 +159,8 @@ module Sablon
         pic_prop = self.class.parent(start_field).at_xpath('.//pic:cNvPr', 'pic' => PICTURE_NS_URI)
         pic_prop.attributes['name'].value = content.name
         blip = self.class.parent(start_field).at_xpath('.//a:blip', 'a' => MAIN_NS_URI)
-        blip.attributes['embed'].value = "rId#{content.rid}"
+        new_rid = Processor.list_ids[content.name.match(/(.*)\.[^.]+$/)[1]]
+        blip.attributes['embed'].value = "rId#{new_rid}"
         start_field.replace('')
         end_field.replace('')
       end
